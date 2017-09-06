@@ -1,0 +1,31 @@
+extends layout
+
+block content
+	main
+		h1= "Janho LED"
+		div#colorTriangle
+		div#rgbInfo
+	div#side
+		div#tabControl
+			div.tabButton(tab_active="true") Own programs
+			div.tabButton Color from somewhere
+		div#tab1.tabPage(tab_active="true")
+			div#programs
+				label Load saved programs:
+				select
+				label Save program as:
+				input(type="text")
+				input(type="button" value="Save")
+			div#design
+				div#designControl
+					button.control(name="start") Start
+					button.control(name="stop") Stop
+					button.control(name="tempo") Tap dat tempo
+					input.control.speed(type="range" name="speed" min="0.1" max="3" step="0.001" value="1")
+					span.speedInfo 60
+				div#designBox
+				div#designOptions
+					div.option.draggable(action-type="hold") Hold
+					div.option.draggable(action-type="sweep") Sweep
+		div#tab2.tabPage
+			moi
