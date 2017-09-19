@@ -16,7 +16,8 @@ app.io = io;
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'pug');
+app.set('view engine', 'jsx');
+app.engine('jsx', require('express-react-views').createEngine())
 
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
@@ -26,10 +27,12 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', index);
-app.use('/users', users);
 
-app.get('/random', function(req,res,next){
+app.get('/', (req, res, next) => {
+  res.render('index', {data:"data"})
+})
+
+app.get('/random', (req,res,next) => {
 		var color = [Math.random(), Math.random(), Math.random()];
 		serial.setColor(color);
 		res.render('index');
@@ -41,6 +44,8 @@ app.use(function(req, res, next) {
   err.status = 404;
   next(err);
 });
+
+
 
 // error handler
 app.use(function(err, req, res, next) {
