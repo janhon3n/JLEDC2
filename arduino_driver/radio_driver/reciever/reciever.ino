@@ -1,6 +1,28 @@
+#include <RH_ASK.h>
+#include <SPI.h>
 #include <SevenSegmentShiftDisplay.h>
 #include <OneButton.h>
 
+
+/*
+ * byte 1, bits 1-4  CHANNEL: The channel the command is ordered to. Execute only if on that channel.
+ * byte 1, bits 5-8  COMMAND: The type of the command
+ * byte 2 RED VALUE
+ * byte 3 GREEN VALUE
+ * byte 4 BLUE VALUE
+ * byte 5 RED VALUE 2
+ * byte 6 GREEN VALUE 2
+ * byte 7 BLUE VALUE 2
+ * byte 8-9 TIME DATA
+ * byte 10 EXTRA DATA
+ * 
+ * COMMAND TYPES:
+ * 0: Hold - Holds the color given by bytes (2,3,4) (r,g,b)
+ * 1: Sweep - Sweeps from the color given by bytes(2,3,4) to the color (5,6,7) over time span given by (8,9) in unit of 10ms. Loops around the color circle byte 10 times.
+ * 2: Blink - Blinks between colors (2,3,4) and (5,6,7) with frequency 1/T where T is (8,9) in unit of 10ms
+ */
+
+ 
 int channel = 0;
 
 int redPin = 3;
@@ -13,15 +35,20 @@ int latchPin = 15;
 
 int buttonPin = A1;
 
+int radioDataPin = 10;
+
 uint8_t red;
 uint8_t green;
 uint8_t blue;
 
-
+RH_ASK driver(2000, radioDataPin, 13, 14, false);
 SevenSegmentShiftDisplay sssd(dataPin, clockPin, latchPin);
 OneButton button(buttonPin, 1);
 
 void setup() {
+  if(!driver.init())
+    Serial.println("init failed");
+    
   button.attachClick(clicked);
   button.attachLongPressStart(longPressed);
   
@@ -36,6 +63,28 @@ void setup() {
 }
 
 void loop() {
+  uint8_t buf[10];
+  uint8_t buflen = sizeof(buf);
+
+  if(driver.recv(buf, &buflen)){
+    uint8_t chan = (buf[0] & 0xf0) >> 4;
+    uint8_t command = buf[0] & 0x0f;
+    if(chan == channel){
+      int timedata = (buf[7] << 8) && buf[8];
+      switch(command){
+        case 0:
+           hold(buf[1], buf[2], buf[3]);
+          break;
+        case 1:
+          sweep(buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], timedata, buf[10]);
+          break;
+        case 2:
+          blink(buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], timedata);
+          break;
+      }
+    }
+  }
+  
   button.tick();
   updateCommand();
 }
@@ -120,6 +169,7 @@ void updateCommand(){
         hsl2rgb(H, S, L, red, green, blue);
         _setColor(red, green, blue);
       }
+      _setColor(_r2, _g2, _b2);
       break;
     case 2:
       if(millis() > _startTime + _timeData){
